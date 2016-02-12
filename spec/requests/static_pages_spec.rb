@@ -2,59 +2,69 @@ require 'spec_helper'
 
 describe "Static pages" do
 
-  let(:base_title) do
-    "Ruby on Rails Sample App"
+  subject { page }
+  
+  shared_examples_for "all static pages" do
+    it { should have_selector('h1',    text: heading) }
+    it { should have_selector('title', text: full_title(page_title)) }
   end
 
   describe "Home page" do
+    before { visit root_path }
 
-    it "should have the content 'Sample App'" do
-      visit '/static_pages/home'
-      page.should have_selector('h1', :text => "Sample App")
+    it { should have_selector('h1',    text: 'Sample App') }
+    it { should have_selector('title', text: full_title('')) }
+    # it { should_not have_selector 'title', text: '| Home' }
+    
+    describe "for signed-in users" do
+      let(:user) { FactoryGirl.create(:user) }
+      before do
+        FactoryGirl.create(:micropost, :user => user, :content => "Lorem")
+        FactoryGirl.create(:micropost, :user => user, :content => "Ipsum")
+        sign_in user
+        visit root_path
+      end
+
+      it "should render the user's feed" do
+        user.feed.each do |item|
+          page.should have_selector("li##{item.id}", text: item.content)
+        end
+      end
+
+      describe "follower/following counts" do
+        let(:other_user) { FactoryGirl.create(:user) }
+        before do
+          other_user.follow!(user)
+          visit root_path
+        end
+
+        it { should have_link("0 following", href: following_user_path(user)) }
+        it { should have_link("1 follower",  href: followers_user_path(user)) }
+      end
     end
 
-    it "should have the title 'Home'" do 
-      visit '/static_pages/home'
-      page.should have_selector('title', :text => "Ruby on Rails Sample App")
-    end
-    it "should not have a custom page title" do
-      visit '/static_pages/home'
-      page.should_not have_selector('title', :text => '| Home')
-    end
   end
 
-  describe "Help page" do 
-    it "should have the content 'Help'" do
-      visit '/static_pages/help'
-      page.should have_selector('h1', :text => "Help")
-    end
+  describe "Help page" do
+    before { visit help_path }
 
-    it "should have the title 'Help'" do
-      visit '/static_pages/help' 
-      page.should have_selector('title', :text => "Ruby on Rails Sample App")
-    end
-
-    it "should not have a custom page title" do
-      visit '/static_pages/help/'
-      page.should_not have_selector('title', :text => '| Help')
-    end
+    it { should have_selector('h1',    text: 'Help') }
+    it { should have_selector('title', text: full_title('Help')) }
   end
 
   describe "About page" do
-    it "should have content 'About Us'" do
-      visit '/static_pages/about'
-      page.should have_selector('h1', :text => "About Us")
-    end
+    before { visit about_path }
 
-    it "should have title 'About Us'" do
-      visit '/static_pages/about'
-      page.should have_selector('title', :text => "Ruby on Rails Sample App")
-    end
-
-    it "should not have custom page title" do 
-      visit '/static_pages/about'
-      page.should_not have_selector('title', :text => '| About Us')
-    end
+    it { should have_selector('h1',    text: 'About') }
+    it { should have_selector('title', text: full_title('About Us')) }
   end
 
+  describe "Contact page" do
+    before { visit contact_path }
+
+    it { should have_selector('h1',    text: 'Contact') }
+    it { should have_selector('title', text: full_title('Contact')) }
+  end
+  
+  
 end
